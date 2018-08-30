@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.WebSockets;
+using System.Net.Sockets;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace ConsoleHttpListen
 {
@@ -11,79 +15,17 @@ namespace ConsoleHttpListen
     {
         public static void Main(string[] args)
         {
-            StartTileListener(772);
+            new Thread(() =>
+            {
+                StartTestListener(771);
+            }).Start();
 
-            //HttpListener listener777 = new HttpListener();
-            //listener777.Prefixes.Add("http://localhost:777/");
-            //while (true)
-            //{
-            //    listener777.Start();
-            //    HttpListenerContext context = listener777.GetContext();
-            //    HttpListenerRequest request = context.Request;
-            //    // "/tile?x=0&y=0&z=1"
+            new Thread(() =>
+            {
+                StartTileListener(772);
+            }).Start();
 
-
-            //    var special = false;
-            //    byte[] buff = { };
-
-            //    var rawUrl = request.RawUrl;
-            //    if (rawUrl.Split('?')[0] != "/tile")
-            //    {
-            //        //listener777.Stop();
-            //    }
-            //    else
-            //    {
-            //        if (rawUrl.Split('?').Length > 0)
-            //        {
-            //            var split = rawUrl.Split('?')[1].Split('&');
-            //            Dictionary<string, string> kvs = new Dictionary<string, string>();
-            //            foreach (var item in split)
-            //            {
-            //                var itemSplit = item.Split('=');
-            //                var k = itemSplit[0];
-            //                var v = itemSplit[1];
-            //                kvs.Add(k, v);
-            //            }
-            //            var url = String.Format("http://t0.tianditu.com/DataServer?T=vec_w&x={0}&y={1}&l={2}", kvs["x"], kvs["y"], kvs["z"]);
-            //            WebClient client = new WebClient();
-            //            var data = client.DownloadData(new Uri(url));
-            //            special = true;
-            //            buff = data;
-            //            ;
-            //        }
-            //    }
-
-
-
-
-
-            //    HttpListenerResponse response = context.Response;
-
-            //    //http://t0.tianditu.com/DataServer?T=vec_w&x=0&y=0&l=1
-            //    string responseString = String.Format("<HTML><BODY> Hello world! </BODY></HTML>");
-            //    byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
-            //    response.ContentLength64 = buffer.Length;
-            //    var finalLength = buffer.Length;
-
-            //    if (special)
-            //    {
-            //        buffer = buff;
-            //        response.ContentLength64 = buff.Length;
-            //        finalLength = buff.Length;
-
-            //    }
-
-
-            //    System.IO.Stream output = response.OutputStream;
-
-
-
-            //    output.Write(buffer, 0, finalLength);
-            //    output.Close();
-            //    listener777.Stop();
-            //}
         }
-
 
         public static void StartTileListener(int port)
         {
@@ -94,12 +36,8 @@ namespace ConsoleHttpListen
                 listener777.Start();
                 HttpListenerContext context = listener777.GetContext();
                 HttpListenerRequest request = context.Request;
-
-
                 var special = false;
                 byte[] buff = { 0 };
-
-
                 var rawUrl = request.RawUrl;
                 if (rawUrl.Split('?')[0] != "/tile")
                 {
@@ -113,22 +51,17 @@ namespace ConsoleHttpListen
                         buff = data;
                         ;
                     }
-
                 }
                 else
                 {
                     if (rawUrl.Split('?').Length > 0)
                     {
-                        var split = rawUrl.Split('?')[1].Split('&');
-                        Dictionary<string, string> kvs = new Dictionary<string, string>();
-                        foreach (var item in split)
-                        {
-                            var itemSplit = item.Split('=');
-                            var k = itemSplit[0];
-                            var v = itemSplit[1];
-                            kvs.Add(k, v);
-                        }
-                        var url = String.Format("http://t0.tianditu.com/DataServer?T=vec_w&x={0}&y={1}&l={2}", kvs["x"], kvs["y"], kvs["z"]);
+
+                        var x = request.QueryString["x"];
+                        var y = request.QueryString["y"];
+                        var z = request.QueryString["z"];
+                        var nul = request.QueryString["null"];
+                        var url = String.Format("http://t0.tianditu.com/DataServer?T=vec_w&x={0}&y={1}&l={2}", x, y, z);
                         WebClient client = new WebClient();
                         var data = client.DownloadData(new Uri(url));
                         special = true;
@@ -148,6 +81,43 @@ namespace ConsoleHttpListen
                 //http://t0.tianditu.com/DataServer?T=vec_w&x=0&y=0&l=1
                 listener777.Stop();
             }
+
+
+        }
+        public static void StartTestListener(int port)
+        {
+
+
+            var listener = new HttpListener();
+            listener.Prefixes.Add(String.Format("http://localhost:{0}/", port));
+
+
+            while (1 == 1)
+            {
+                listener.Start();
+
+                listener.BeginGetContext((a) =>
+                {
+
+                    HttpListener hl = (HttpListener)a.AsyncState;
+                    var ctx = hl.EndGetContext(a);
+                    var req = ctx.Request;
+                    var res = ctx.Response;
+                    string responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
+                    var buff = System.Text.Encoding.UTF8.GetBytes(responseString);
+                    res.ContentLength64 = buff.Length;
+
+                    var output = res.OutputStream;
+                    output.Write(buff, 0, buff.Length);
+                    output.Close();
+
+                }, listener);
+                var context = listener.GetContext();
+                var request = context.Request;
+                var response = context.Response;
+                var outStream = response.OutputStream;
+            }
+
         }
     }
 }
