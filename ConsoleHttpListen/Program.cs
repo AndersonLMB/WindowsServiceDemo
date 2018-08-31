@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Configuration;
 
 namespace ConsoleHttpListen
 {
@@ -15,21 +16,28 @@ namespace ConsoleHttpListen
     {
         public static void Main(string[] args)
         {
-            new Thread(() =>
-            {
-                StartTestListener(771);
-            }).Start();
 
-            new Thread(() =>
-            {
-                StartTileListener(772);
-            }).Start();
+
+            var testPort = ConfigurationManager.AppSettings["testPort"].ToString();
+            var tilePort = ConfigurationManager.AppSettings["tilePort"].ToString();
+            new Thread(() => { StartTestListener(int.Parse(testPort)); }).Start();
+            new Thread(() => { StartTileListener(int.Parse(tilePort)); }).Start();
 
         }
 
         public static void StartTileListener(int port)
         {
             HttpListener listener777 = new HttpListener();
+
+            var ghe = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var item in ghe.AddressList)
+            {
+                if (item.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    listener777.Prefixes.Add(String.Format("http://{1}:{0}/", port, item.ToString()));
+                }
+            }
+
             listener777.Prefixes.Add(String.Format("http://localhost:{0}/", port));
             while (true)
             {
@@ -89,8 +97,17 @@ namespace ConsoleHttpListen
 
 
             var listener = new HttpListener();
-            listener.Prefixes.Add(String.Format("http://localhost:{0}/", port));
 
+            var ghe = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var item in ghe.AddressList)
+            {
+                if (item.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    listener.Prefixes.Add(String.Format("http://{1}:{0}/", port, item.ToString()));
+                }
+            }
+
+            listener.Prefixes.Add(String.Format("http://localhost:{0}/", port));
 
             while (1 == 1)
             {
